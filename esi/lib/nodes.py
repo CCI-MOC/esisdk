@@ -16,6 +16,48 @@ import concurrent.futures
 from esi.lib import networks
 
 
+def node_list_full_info(connection):
+    """Get a list of nodes with more attributes
+
+    :param connection: An ESI connection
+    :type connection: :class:`~esi.connection.ESIConnection`
+
+    :returns: A list of dictionaries containing baremetal and lease information
+    """
+
+    esi_nodes = []
+    baremetal_nodes = []
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        f1 = executor.submit(connection.list_nodes)
+        f2 = executor.submit(connection.baremetal.nodes, details=True)
+        esi_nodes = f1.result()
+        baremetal_nodes = list(f2.result())
+
+    esi_nodes.sort(key=lambda node: node.name)
+    baremetal_nodes.sort(key=lambda node: node.name)
+
+    return [
+        {
+            'uuid': bm.id,
+            'name': bm.name,
+            'maintenance': bm.is_maintenance,
+            'provision_state': bm.provision_state,
+            'target_provision_state': bm.target_provision_state,
+            'power_state': bm.power_state,
+            'target_power_state': bm.target_power_state,
+            'properties': bm.properties,
+            'lease_uuid': e.lease_uuid,
+            'owner': e.owner,
+            'lessee': e.lessee,
+            'resource_class': e.resource_class,
+            'future_offers': e.future_offers,
+            'future_leases': e.future_leases,
+        }
+        for e, bm in zip(esi_nodes, baremetal_nodes)
+    ]
+
+
 def node_and_port_list(connection, filter_node=None):
     """Get lists baremetal nodes and ports
 
@@ -61,7 +103,7 @@ def network_list(connection, filter_node=None, filter_network=None):
         'network_info': [
             {
                 'baremetal_port': openstack.baremetal.v1.port.Port,
-                'network_port': [openstack.network.v2.port.Port] or [],
+                'network_ports': [openstack.network.v2.port.Port] or [],
                 'networks': {
                     'parent': openstack.network.v2.network.Network or None,
                     'trunk': [openstack.network.v2.network.Network] or [],
