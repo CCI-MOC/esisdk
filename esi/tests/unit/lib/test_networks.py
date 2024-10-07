@@ -389,3 +389,70 @@ class TestGetNetworksFromPort(TestCase):
         )
 
         self.assertEqual(actual, expected)
+
+
+class TestCreatePort(TestCase):
+
+    def setUp(self):
+        super(TestCreatePort, self).setUp()
+        self.connection = mock.Mock()
+        self.network = test_utils.create_mock_object({
+            "id": "network_uuid",
+            "name": "test_network"
+        })
+        self.port = test_utils.create_mock_object({
+            "id": "port_uuid",
+            "network_id": "network_uuid",
+            "name": "esi-port-test_network",
+        })
+
+    def test_create_port_with_defaults(self):
+        self.connection.network.ports.return_value = []
+        self.connection.network.create_port.return_value = self.port
+        actual_port = networks.create_port(self.connection, self.network)
+        self.connection.network.ports.assert_called_once_with(
+            name='esi-port-test_network', status='DOWN'
+        )
+        self.connection.network.create_port.assert_called_once_with(
+            name='esi-port-test_network', network_id="network_uuid"
+        )
+        self.assertEqual(actual_port, self.port)
+
+    def test_create_port_with_existing_port(self):
+        self.connection.network.ports.return_value = [self.port]
+        actual_port = networks.create_port(self.connection, self.network)
+        self.connection.network.ports.assert_called_once_with(
+            name='esi-port-test_network', status='DOWN'
+        )
+        self.connection.network.create_port.assert_not_called()
+        self.assertEqual(actual_port, self.port)
+
+
+class TestAttachFloatingIP(TestCase):
+
+    def setUp(self):
+        super(TestAttachFloatingIP, self).setUp()
+        self.connection = mock.Mock()
+        self.floating_ip_address = "8.8.8.8"
+        self.port_id = "neutron_port_uuid_2"
+
+        self.floating_ip = test_utils.create_mock_object({
+            "id": "floating_ip_uuid",
+            "floating_ip_address": self.floating_ip_address,
+            "floating_network_id": "floating_network_id",
+            "port_id": self.port_id
+        })
+
+    def test_attach_floating_ip(self):
+        self.connection.network.ips.return_value = [self.floating_ip]
+        self.connection.network.update_ip.return_value = self.floating_ip
+
+        actual_floating_ip = networks.attach_floating_ip(
+            self.connection, self.floating_ip_address, self.port_id
+        )
+
+        self.connection.network.ips.assert_called_once()
+        self.connection.network.update_ip.assert_called_once_with(
+            self.floating_ip, port_id=self.port_id
+        )
+        self.assertEqual(actual_floating_ip, self.floating_ip)
