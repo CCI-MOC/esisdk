@@ -112,3 +112,44 @@ def get_networks_from_port(connection, port, networks_dict={}, floating_ips_dict
         floating_network = connection.network.get_network(floating_network_id)
 
     return parent_network, trunk_networks, trunk_ports, floating_network
+
+
+def create_port(connection, network, name=None):
+    """
+    Creates a port on the specified network using the network object.
+
+    :param connection: An OpenStack connection object
+    :param network: The network object where the port should be created
+    :param name: Optional name for the port. If not provided, a default name is generated.
+
+    :return: The created port object
+    """
+    if not name:
+        name = 'esi-port-{0}'.format(network.name)
+
+    existing_ports = list(connection.network.ports(name=name, status='DOWN'))
+    if existing_ports:
+        network_port = existing_ports[0]
+    else:
+        network_port = connection.network.create_port(name=name, network_id=network.id)
+
+    return network_port
+
+
+def attach_floating_ip(connection, floating_ip_address, port_id):
+    """
+    Attaches a floating IP to a port using the floating IP address.
+
+    :param connection: An OpenStack connection object
+    :param floating_ip_address: The floating IP address to attach
+    :param port_id: The ID of the port to which the floating IP will be attached
+    :return: The updated floating IP object
+    """
+
+    floating_ips = connection.network.ips()
+
+    floating_ip = next(ip for ip in floating_ips if ip.floating_ip_address == floating_ip_address)
+
+    updated_floating_ip = connection.network.update_ip(floating_ip, port_id=port_id)
+
+    return updated_floating_ip
