@@ -31,5 +31,6 @@ class ConsoleAuthToken(resource.Resource):
     #: The value of the resource. Also available in headers.
     node_uuid = resource.Body("node_uuid", alternate_id=True)
     node_uuid_or_name = resource.Body("node_uuid_or_name")
+    token_ttl = resource.Body("token_ttl")
     token = resource.Body("token")
     access_url = resource.Body("access_url")
