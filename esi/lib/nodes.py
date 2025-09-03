@@ -301,10 +301,10 @@ def network_detach(
         )
 
     node = connection.baremetal.get_node(node_name_or_uuid)
-    ports = []
+    port_ids = []
     if port_names_or_uuids:
-        ports = [
-            connection.network.find_port(port, ignore_missing=False)
+        port_ids = [
+            connection.network.find_port(port, ignore_missing=False).id
             for port in port_names_or_uuids
         ]
     else:
@@ -321,25 +321,19 @@ def network_detach(
                 "Node {0} is not associated with any port".format(node.name)
             )
 
-        if all_ports:
-            ports = [
-                connection.network.find_port(
-                    bmport.internal_info["tenant_vif_port_id"], ignore_missing=False
-                )
+        if all_ports or len(mapped_node_port_list) == 1:
+            port_ids = [
+                bmport.internal_info["tenant_vif_port_id"]
                 for bmport in mapped_node_port_list
             ]
-        elif len(mapped_node_port_list) > 1:
+        else:
             raise exceptions.ResourceFailure(
                 "Node {0} is associated with multiple ports. Port must be specified".format(
                     node.name
                 )
             )
-        elif len(mapped_node_port_list) == 1:
-            vif = mapped_node_port_list[0].internal_info["tenant_vif_port_id"]
-            port = connection.network.find_port(vif, ignore_missing=False)
-            ports = [port]
 
     return [
-        (port.id, connection.baremetal.detach_vif_from_node(node, port.id))
-        for port in ports
+        (port_id, connection.baremetal.detach_vif_from_node(node, port_id))
+        for port_id in port_ids
     ]
