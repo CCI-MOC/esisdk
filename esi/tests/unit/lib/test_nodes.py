@@ -1060,10 +1060,6 @@ class TestDetach(TestCase):
         )
 
     def test_take_action_detach_all_ports(self):
-        self.connection.network.find_port.side_effect = [
-            self.neutron_port1,
-            self.neutron_port2,
-        ]
         self.connection.baremetal.ports.return_value = [
             self.port1,
             self.port2,
